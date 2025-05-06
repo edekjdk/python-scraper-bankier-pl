@@ -8,7 +8,7 @@ def main():
     scraper = Scraper(driver)
 
     scraper.load_page(page_url)
-    scraper.scrape_data()
+    scraper.scrape_wig_20_main_table_data()
 
     driver.quit()
 
