@@ -1,0 +1,9 @@
+class Scraper:
+    def __init__(self, driver):
+        self.driver = driver
+
+    def load_page(self, page_url):
+        self.driver.get(page_url)
+
+    def scrape_data(self):
+        pass
