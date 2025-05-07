@@ -11,8 +11,8 @@ class Scraper:
     def scrape_wig_20_main_table_data(self):
         table_head_xpath = "/html/body/div[3]/div[1]/div[2]/div[2]/div[2]/div[2]/div[6]/div[2]/table[1]/thead"
         table_head = self.driver.find_element(By.XPATH, table_head_xpath)
-        table_head_items = []
         table_head_ths = table_head.find_elements(By.TAG_NAME, "th")
+        table_head_items = []
 
         table_xpath = "/html/body/div[3]/div[1]/div[2]/div[2]/div[2]/div[2]/div[6]/div[2]/table[1]"
         table = self.driver.find_element(By.XPATH, table_xpath)
@@ -41,3 +41,25 @@ class Scraper:
             print("------")
             for k, v in i.items():
                 print("{}: {}".format(k, v))
+
+    def scrape_each_wig20_company_data(self):
+        table_xpath = "/html/body/div[3]/div[1]/div[2]/div[2]/div[2]/div[2]/div[6]/div[2]/table[1]"
+        table = self.driver.find_element(By.XPATH, table_xpath)
+        table_links = table.find_elements(By.TAG_NAME, "a")
+        links_to_visit = [link.get_attribute("href") for link in table_links]
+        for link in links_to_visit:
+            self.driver.get(link)
+            comapany_table_xpath = "/html/body/div[3]/div/div[2]/div[2]/div[2]/div[2]/div[3]/div[2]/table/tbody"
+            company_main_price_xpath = (
+                "/html/body/div[3]/div/div[2]/div[2]/div[1]/div[1]/div/div[1]"
+            )
+
+            company_table = self.driver.find_element(By.XPATH, comapany_table_xpath)
+            company_table_tds = company_table.find_elements(By.TAG_NAME, "td")
+            company_main_price = self.driver.find_element(
+                By.XPATH, company_main_price_xpath
+            ).text
+
+            print(company_main_price)
+            # for td in company_table_tds:
+            #     print(td.get_attribute("outerHTML"))
