@@ -9,7 +9,7 @@ def main():
 
     scraper.load_page(page_url)
 
-    # scraper.scrape_wig_20_main_table_data()
+    scraper.scrape_wig_20_main_table_data()
     scraper.scrape_each_wig20_company_data()
 
     driver.quit()

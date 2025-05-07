@@ -31,10 +31,11 @@ class Scraper:
             row_dict = {key: value for key, value in zip(table_head_items, row_values)}
             table_data.append(row_dict)
 
-        for i in table_data:
-            print("------")
-            for k, v in i.items():
-                print("{}: {}".format(k, v))
+        return table_data
+        # for i in table_data:
+        #     print("------")
+        #     for k, v in i.items():
+        #         print("{}: {}".format(k, v))
 
     def scrape_each_wig20_company_data(self):
         table_xpath = "/html/body/div[3]/div[1]/div[2]/div[2]/div[2]/div[2]/div[6]/div[2]/table[1]"
@@ -74,7 +75,8 @@ class Scraper:
             }
             all_data.append(row_dict)
 
-            for i in all_data:
-                print("------")
-                for k, v in i.items():
-                    print("{}: {}".format(k, v))
+            return all_data
+            # for i in all_data:
+            #     print("------")
+            #     for k, v in i.items():
+            #         print("{}: {}".format(k, v))
