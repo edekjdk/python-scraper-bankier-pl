@@ -1,6 +1,6 @@
 from selenium.webdriver.common.by import By
 from datetime import date
-
+import csv
 
 class Scraper:
     def __init__(self, driver):
@@ -30,6 +30,12 @@ class Scraper:
             row_values = [td.text for td in tds]
             row_dict = {key: value for key, value in zip(table_head_items, row_values)}
             table_data.append(row_dict)
+
+        # Zapis do Dane.csv
+        with open("Dane1.csv", "w", encoding="utf-8", newline="") as file:
+            writer = csv.DictWriter(file, fieldnames=table_head_items)
+            writer.writeheader()
+            writer.writerows(table_data)
 
         return table_data
         # for i in table_data:
@@ -74,8 +80,16 @@ class Scraper:
                 **{key: value for key, value in zip(keys, values)},
             }
             all_data.append(row_dict)
+            
+
+            # Zapis do Dane.csv
+            with open("Dane2.csv", "w", encoding="utf-8", newline="") as file:
+                writer = csv.DictWriter(file, fieldnames=row_dict.keys())
+                writer.writeheader()
+                writer.writerows(all_data)
 
             return all_data
+        
             # for i in all_data:
             #     print("------")
             #     for k, v in i.items():
