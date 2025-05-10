@@ -2,6 +2,15 @@ from selenium.webdriver.common.by import By
 from datetime import date
 import csv
 
+def parse_number(text):
+    if text is None:
+        return None
+    text = text.replace(" ", "").replace("zł", "").replace("%", "").replace(",", ".")
+    try:
+        return float(text)
+    except ValueError:
+        return text   
+
 class Scraper:
     def __init__(self, driver):
         self.driver = driver
@@ -42,6 +51,8 @@ class Scraper:
         #     print("------")
         #     for k, v in i.items():
         #         print("{}: {}".format(k, v))
+        
+     
 
     def scrape_each_wig20_company_data(self):
         table_xpath = "/html/body/div[3]/div[1]/div[2]/div[2]/div[2]/div[2]/div[6]/div[2]/table[1]"
@@ -49,8 +60,10 @@ class Scraper:
         table_links = table.find_elements(By.TAG_NAME, "a")
         links_to_visit = [link.get_attribute("href") for link in table_links]
         all_data = []
+
         for link in links_to_visit:
             self.driver.get(link)
+            ticker = link.split("symbol=")[-1]
             company_name_xpath = (
                 "/html/body/div[3]/div/div[2]/div[2]/div[1]/div[1]/span/a"
             )
@@ -72,23 +85,25 @@ class Scraper:
                     if ":" in td.text:
                         keys.append(td.text[:-1])
                     else:
-                        values.append(td.text)
+                        values.append(parse_number(td.text))  
             row_dict = {
+                "Ticker": ticker,
                 "Nazwa": company_name,
-                "Cena": company_main_price,
+                "Cena": parse_number(company_main_price),
                 "Data": date.today().strftime("%Y-%m-%d"),
                 **{key: value for key, value in zip(keys, values)},
             }
             all_data.append(row_dict)
             
 
-            # Zapis do Dane.csv
+    # Zapis do Dane.csv
+        if all_data:
             with open("Dane2.csv", "w", encoding="utf-8", newline="") as file:
-                writer = csv.DictWriter(file, fieldnames=row_dict.keys())
+                writer = csv.DictWriter(file, fieldnames=all_data[0].keys())
                 writer.writeheader()
                 writer.writerows(all_data)
 
-            return all_data
+        return all_data
         
             # for i in all_data:
             #     print("------")
