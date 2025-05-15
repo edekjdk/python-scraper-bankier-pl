@@ -1,15 +1,7 @@
 from selenium.webdriver.common.by import By
 from datetime import date
-import csv
+from datetime import datetime
 
-def parse_number(text):
-    if text is None:
-        return None
-    text = text.replace(" ", "").replace("zł", "").replace("%", "").replace(",", ".")
-    try:
-        return float(text)
-    except ValueError:
-        return text   
 
 class Scraper:
     def __init__(self, driver):
@@ -19,14 +11,13 @@ class Scraper:
         self.driver.get(page_url)
 
     def scrape_wig_20_main_table_data(self):
-        table_head_xpath = "/html/body/div[3]/div[1]/div[2]/div[2]/div[2]/div[2]/div[6]/div[2]/table[1]/thead"
-        table_head = self.driver.find_element(By.XPATH, table_head_xpath)
+        table = self.driver.find_element(By.CSS_SELECTOR, "table.sortTableMixedData")
+        table_head = table.find_element(By.TAG_NAME, "thead")
+        table_body = table.find_element(By.TAG_NAME, "tbody")
         table_head_ths = table_head.find_elements(By.TAG_NAME, "th")
         table_head_items = []
 
-        table_xpath = "/html/body/div[3]/div[1]/div[2]/div[2]/div[2]/div[2]/div[6]/div[2]/table[1]"
-        table = self.driver.find_element(By.XPATH, table_xpath)
-        table_rows = table.find_elements(By.TAG_NAME, "tr")
+        table_body_rows = table_body.find_elements(By.TAG_NAME, "tr")
         table_data = []
 
         for th in table_head_ths:
@@ -34,50 +25,37 @@ class Scraper:
             th = th.replace("<br>", " ")
             table_head_items.append(th)
 
-        for row in table_rows[1:]:
+        for row in table_body_rows[1:]:
             tds = row.find_elements(By.TAG_NAME, "td")
             row_values = [td.text for td in tds]
             row_dict = {key: value for key, value in zip(table_head_items, row_values)}
             table_data.append(row_dict)
-
-        # Zapis do Dane.csv
-        with open("Dane1.csv", "w", encoding="utf-8", newline="") as file:
-            writer = csv.DictWriter(file, fieldnames=table_head_items)
-            writer.writeheader()
-            writer.writerows(table_data)
-
         return table_data
-        # for i in table_data:
-        #     print("------")
-        #     for k, v in i.items():
-        #         print("{}: {}".format(k, v))
-        
-     
 
     def scrape_each_wig20_company_data(self):
-        table_xpath = "/html/body/div[3]/div[1]/div[2]/div[2]/div[2]/div[2]/div[6]/div[2]/table[1]"
-        table = self.driver.find_element(By.XPATH, table_xpath)
-        table_links = table.find_elements(By.TAG_NAME, "a")
+        table = self.driver.find_element(By.CSS_SELECTOR, "table.sortTableMixedData")
+        table_body = table.find_element(By.TAG_NAME, "tbody")
+
+        table_links = table_body.find_elements(By.TAG_NAME, "a")
         links_to_visit = [link.get_attribute("href") for link in table_links]
         all_data = []
 
         for link in links_to_visit:
             self.driver.get(link)
             ticker = link.split("symbol=")[-1]
-            company_name_xpath = (
-                "/html/body/div[3]/div/div[2]/div[2]/div[1]/div[1]/span/a"
-            )
-            comapany_table_xpath = "/html/body/div[3]/div/div[2]/div[2]/div[2]/div[2]/div[3]/div[2]/table/tbody"
-            company_main_price_xpath = (
-                "/html/body/div[3]/div/div[2]/div[2]/div[1]/div[1]/div/div[1]"
-            )
 
-            company_table = self.driver.find_element(By.XPATH, comapany_table_xpath)
-            company_table_tds = company_table.find_elements(By.TAG_NAME, "td")
-            company_name = self.driver.find_element(By.XPATH, company_name_xpath).text
-            company_main_price = self.driver.find_element(
-                By.XPATH, company_main_price_xpath
+            company_name = self.driver.find_element(
+                By.CSS_SELECTOR, "a.profilHead"
             ).text
+            company_main_price = self.driver.find_element(
+                By.CSS_SELECTOR, "div.profilLast"
+            ).text
+
+            company_table = self.driver.find_element(
+                By.CSS_SELECTOR, "table.summaryTable"
+            )
+            company_table_body = company_table.find_element(By.TAG_NAME, "tbody")
+            company_table_tds = company_table_body.find_elements(By.TAG_NAME, "td")
             keys = []
             values = []
             for td in company_table_tds:
@@ -85,27 +63,26 @@ class Scraper:
                     if ":" in td.text:
                         keys.append(td.text[:-1])
                     else:
-                        values.append(parse_number(td.text))  
+                        values.append(self._parse_number(td.text))
             row_dict = {
                 "Ticker": ticker,
                 "Nazwa": company_name,
-                "Cena": parse_number(company_main_price),
+                "Cena": self._parse_number(company_main_price),
                 "Data": date.today().strftime("%Y-%m-%d"),
+                "Godzina": datetime.now().strftime(("%H:%M:%S")),
                 **{key: value for key, value in zip(keys, values)},
             }
             all_data.append(row_dict)
-            
-
-    # Zapis do Dane.csv
-        if all_data:
-            with open("Dane2.csv", "w", encoding="utf-8", newline="") as file:
-                writer = csv.DictWriter(file, fieldnames=all_data[0].keys())
-                writer.writeheader()
-                writer.writerows(all_data)
 
         return all_data
-        
-            # for i in all_data:
-            #     print("------")
-            #     for k, v in i.items():
-            #         print("{}: {}".format(k, v))
+
+    def _parse_number(self, text):
+        if text is None:
+            return None
+        text = (
+            text.replace(" ", "").replace("zł", "").replace("%", "").replace(",", ".")
+        )
+        try:
+            return float(text)
+        except ValueError:
+            return text
