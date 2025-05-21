@@ -30,8 +30,7 @@ def main():
             save_to_csv(data2, "Dane2.csv")
 
             driver.quit()
-            #systime.sleep(3600) do testow
-            break
+            systime.sleep(1800)
         elif current_time < start_hour:
             systime.sleep(300)
 
