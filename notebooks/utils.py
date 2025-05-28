@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
+import re
 
 
 def draw_plot(ticker, table):
@@ -22,3 +23,27 @@ def draw_plot(ticker, table):
     ax.set_ylabel("Cena [PLN]")
     plt.tight_layout()
     plt.show()
+
+
+
+def parse_number(text):
+    if text is None:
+        return None
+    if isinstance(text, (int, float)):
+        return float(text)
+
+    cleaned = (
+        str(text)
+        .replace(",", ".")
+        .replace(" ", "")
+        .replace("zł", "")
+        .replace("%", "")
+        .replace("szt", "")
+        .replace("mln", "")
+    )
+    cleaned = re.sub(r"\(.*?\)", "", cleaned) 
+
+    try:
+        return float(cleaned)
+    except ValueError:
+        return text

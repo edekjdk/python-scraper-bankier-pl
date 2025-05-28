@@ -31,7 +31,7 @@ def main():
             save_to_csv(data2, "data/data2.csv")
 
             driver.quit()
-            systime.sleep(1800)
+            systime.sleep(1800)            
         elif current_time < start_hour:
             systime.sleep(300)
 

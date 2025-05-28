@@ -80,7 +80,7 @@ class Scraper:
         if text is None:
             return None
         text = (
-            text.replace(" ", "").replace("zł", "").replace("%", "").replace(",", ".")
+            text.replace(" ", "").replace("zł", "").replace("%", "").replace(",", ".").replace("mln", "").replace("tys", "").replace("mld", "").replace("szt", "")
         )
         try:
             return float(text)
