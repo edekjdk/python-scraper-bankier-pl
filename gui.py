@@ -8,100 +8,112 @@ import numpy as np
 import os
 
 class StockApp(tk.Tk):
-    def __init__(self, data_path="data/data2.csv"):
+    def __init__(window, data_path="data/data2.csv"):
         super().__init__()
-        self.title("WIG20 Intraday Analyzer")
-        self.geometry("1200x800")
+        window.title("Wykresy spółek WIG20")
+        window.geometry("1200x800")
+        
 
         if not os.path.exists(data_path):
-            self.show_error("Plik danych nie istnieje. Najpierw zescrapuj dane.")
+            window.show_error("Plik danych nie istnieje. Najpierw zescrapuj dane.")
             return
 
-        self.df = pd.read_csv(data_path)
-        self.df['Datetime'] = pd.to_datetime(self.df['Data'] + ' ' + self.df['Godzina'])
-        self.df.sort_values(['Ticker', 'Datetime'], inplace=True)
-        self.df['Return'] = self.df.groupby('Ticker')['Cena'].pct_change() * 100
-        self.df['Hour'] = self.df['Datetime'].dt.hour
-        self.df['Spread'] = self.df['Max 1D'] - self.df['Min 1D']
-        self.df['VolumeDelta'] = self.df.groupby('Ticker')['Wolumen obrotu'].diff()
-        self.df['Datetime_5min'] = self.df['Datetime'].dt.floor("5min")
-        self.df['Return_5min'] = self.df.groupby('Ticker')['Cena'].pct_change() * 100
+        window.df = pd.read_csv(data_path)
+        window.df['Datetime'] = pd.to_datetime(window.df['Data'] + ' ' + window.df['Godzina'])
+        window.df.sort_values(['Ticker', 'Datetime'], inplace=True)
+        window.df['Return'] = window.df.groupby('Ticker')['Cena'].pct_change() * 100
+        window.df['Hour'] = window.df['Datetime'].dt.hour
+        window.df['Spread'] = window.df['Max 1D'] - window.df['Min 1D']
+        window.df['VolumeDelta'] = window.df.groupby('Ticker')['Wolumen obrotu'].diff()
+        window.df['Datetime_5min'] = window.df['Datetime'].dt.floor("5min")
+        window.df['Return_5min'] = window.df.groupby('Ticker')['Cena'].pct_change() * 100
 
-        self.tickers = sorted(self.df['Ticker'].unique())
-        self.dates = sorted(self.df['Data'].unique())
+        window.tickers = sorted(window.df['Ticker'].unique())
+        window.dates = sorted(window.df['Data'].unique())
 
-        ctrl_frame = ttk.Frame(self)
-        ctrl_frame.pack(side=tk.TOP, fill=tk.X, pady=5)
+        panel_ctrl = ttk.Frame(window)
+        panel_ctrl.pack(side=tk.TOP, fill=tk.X, pady=5)
 
-        ttk.Label(ctrl_frame, text="Spółka:").pack(side=tk.LEFT, padx=5)
-        self.ticker_cb = ttk.Combobox(ctrl_frame, values=self.tickers, state="readonly")
-        self.ticker_cb.current(0)
-        self.ticker_cb.pack(side=tk.LEFT)
+        ttk.Label(panel_ctrl, text="Spółka:").pack(side=tk.LEFT, padx=5)
+        window.ticker_cb = ttk.Combobox(panel_ctrl, values=window.tickers, state="readonly")
+        window.ticker_cb.current(0)
+        window.ticker_cb.pack(side=tk.LEFT)
 
-        ttk.Label(ctrl_frame, text="Dzień:").pack(side=tk.LEFT, padx=5)
-        self.date_cb = ttk.Combobox(ctrl_frame, values=self.dates, state="readonly")
-        self.date_cb.current(0)
-        self.date_cb.pack(side=tk.LEFT)
+        ttk.Label(panel_ctrl, text="Dzień:").pack(side=tk.LEFT, padx=5)
+        window.date_cb = ttk.Combobox(panel_ctrl, values=window.dates, state="readonly")
+        window.date_cb.current(0)
+        window.date_cb.pack(side=tk.LEFT)
 
-        self.ticker_cb.bind("<<ComboboxSelected>>", lambda e: self.update_plots())
-        self.date_cb.bind("<<ComboboxSelected>>", lambda e: self.update_plots())
+        window.ticker_cb.bind("<<ComboboxSelected>>", lambda e: window.update_plots())
+        window.date_cb.bind("<<ComboboxSelected>>", lambda e: window.update_plots())
 
-        self.fig, self.axes = plt.subplots(2, 3, figsize=(12, 8), constrained_layout=True)
-        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
-        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        window.fig, window.axes = plt.subplots(2, 3, figsize=(12, 8), constrained_layout=True)
+        window.canvas = FigureCanvasTkAgg(window.fig, master=window)
+        window.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        self.update_plots()
+        window.update_plots()
 
-    def update_plots(self):
-        ticker = self.ticker_cb.get()
-        day = self.date_cb.get()
+    def update_plots(window):
+        ticker = window.ticker_cb.get()
+        day = window.date_cb.get()
 
-        sub = self.df[(self.df['Ticker'] == ticker) & (self.df['Data'] == day)]
-        sub_all = self.df[self.df['Data'] == day]
+        sub = window.df[(window.df['Ticker'] == ticker) & (window.df['Data'] == day)]
+        sub_all = window.df[window.df['Data'] == day]
 
-        self.axes[0, 0].clear()
-        self.axes[0, 0].plot(sub['Datetime'], sub['Cena'], marker='o')
-        self.axes[0, 0].set_title('Cena intraday')
+        #2for i, ax in enumerate(window.axes.flatten()):
+        #2    if i != 3:  
+        #2     ax.clear()
+    
+        window.axes[0, 0].clear()
+        window.axes[0, 0].plot(sub['Datetime'], sub['Cena'], marker='o')
+        window.axes[0, 0].set_title('Cena akcji')
 
-        self.axes[0, 1].clear()
-        self.axes[0, 1].scatter(sub['Return'], sub['Wolumen obrotu'])
-        self.axes[0, 1].set_title('Return vs Volume')
+        window.axes[0, 1].clear()
+        window.axes[0, 1].scatter(sub['Return'], sub['Wolumen obrotu'])
+        window.axes[0, 1].set_title('Zwrot vs wolumen')
 
-        self.axes[0, 2].clear()
+        window.axes[0, 2].clear()
         sub_box = sub.copy()
         sub_box['Hour'] = sub_box['Datetime'].dt.hour
-        sub_box.boxplot(column='Return', by='Hour', ax=self.axes[0, 2])
-        self.axes[0, 2].set_title('Boxplot: Return by Hour')
-        self.axes[0, 2].figure.suptitle('')
+        sub_box.boxplot(column='Return', by='Hour', ax=window.axes[0, 2])
+        window.axes[0, 2].set_title('Boxplot zwrot w ujęciu godzinowym')
+        window.axes[0, 2].figure.suptitle('')
 
-        self.axes[1, 0].clear()
+        window.axes[1, 0].clear()
+        #2window.fig.delaxes(window.axes[1, 0])  
+        #2window.axes[1, 0] = window.fig.add_subplot(2, 3, 4)  
         pivot = sub_all.pivot_table(index='Datetime_5min', columns='Ticker', values='Return_5min')
         corr = pivot.corr()
         mask = np.triu(np.ones_like(corr, dtype=bool))
-        sns.heatmap(corr, mask=mask, cmap="coolwarm", annot=True, fmt=".2f", ax=self.axes[1, 0])
-        self.axes[1, 0].set_title('Heatmap korelacji (5 min)')
+        #1if hasattr(window, 'heatmap_colorbar') and window.heatmap_colorbar:   
+        #1    window.heatmap_colorbar.remove()                                   
+        #1    window.heatmap_colorbar = None
+        #1window.axes[1, 0].clear()
+        sns.heatmap(corr, mask=mask, cmap="coolwarm", annot=True, fmt=".2f", ax=window.axes[1, 0])
+        #1window.heatmap_colorbar = sns_plot.collections[0].colorbar
+        window.axes[1, 0].set_title('Heatmap korelacji (5 min)')
 
-        self.axes[1, 1].clear()
-        self.axes[1, 1].plot(sub['Datetime'], sub['Spread'], marker='o')
-        self.axes[1, 1].set_title('Spread over time')
+        window.axes[1, 1].clear()
+        window.axes[1, 1].plot(sub['Datetime'], sub['Spread'], marker='o')
+        window.axes[1, 1].set_title('Rozpowszechnianie się w czasie')
 
-        self.axes[1, 2].clear()
+        window.axes[1, 2].clear()
         vol_hour = sub.groupby(sub['Hour'])['VolumeDelta'].sum()
-        self.axes[1, 2].plot(vol_hour.index, vol_hour.values, marker='o')
-        self.axes[1, 2].set_title('Volume Delta by Hour')
+        window.axes[1, 2].plot(vol_hour.index, vol_hour.values, marker='o')
+        window.axes[1, 2].set_title('Zmiana wolumenu według godziny')
 
-        for ax in self.axes.flatten():
+        for ax in window.axes.flatten():
             ax.tick_params(axis='x', rotation=45)
 
-        self.fig.suptitle(f"Analiza: {ticker} - {day}", fontsize=14)
-        self.canvas.draw()
+        window.fig.suptitle(f"Analiza: {ticker} - {day}", fontsize=14)
+        window.canvas.draw()
 
-    def show_error(self, message):
-        err_window = tk.Toplevel(self)
+    def show_error(window, message):
+        err_window = tk.Toplevel(window)
         err_window.title("Błąd")
         err_label = ttk.Label(err_window, text=message, foreground="red")
         err_label.pack(padx=20, pady=20)
-        close_btn = ttk.Button(err_window, text="Zamknij", command=self.destroy)
+        close_btn = ttk.Button(err_window, text="Zamknij", command=window.destroy)
         close_btn.pack(pady=10)
 
 if __name__ == '__main__':
