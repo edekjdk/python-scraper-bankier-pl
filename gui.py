@@ -2,120 +2,246 @@ import tkinter as tk
 from tkinter import ttk
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 import matplotlib.pyplot as plt
-import seaborn as sns
 import pandas as pd
 import numpy as np
 import os
 
-class StockApp(tk.Tk):
-    def __init__(window, data_path="data/data2.csv"):
+class GuiApp(tk.Tk):
+    def __init__(self, data_path="data/data2.csv"):
         super().__init__()
-        window.title("Wykresy spółek WIG20")
-        window.geometry("1200x800")
         
-
+        self.title("Wykresy spółek WIG20")
+        self.geometry("1200x800")
+        
+        # Podmiana domyślnego zachowania pod zamykaniem okna
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
+        
+        # Sprawdzanie czy są dane
         if not os.path.exists(data_path):
-            window.show_error("Plik danych nie istnieje. Najpierw zescrapuj dane.")
+            self.show_error("Plik danych nie istnieje. Najpierw zescrapuj dane.")
             return
 
-        window.df = pd.read_csv(data_path)
-        window.df['Datetime'] = pd.to_datetime(window.df['Data'] + ' ' + window.df['Godzina'])
-        window.df.sort_values(['Ticker', 'Datetime'], inplace=True)
-        window.df['Return'] = window.df.groupby('Ticker')['Cena'].pct_change() * 100
-        window.df['Hour'] = window.df['Datetime'].dt.hour
-        window.df['Spread'] = window.df['Max 1D'] - window.df['Min 1D']
-        window.df['VolumeDelta'] = window.df.groupby('Ticker')['Wolumen obrotu'].diff()
-        window.df['Datetime_5min'] = window.df['Datetime'].dt.floor("5min")
-        window.df['Return_5min'] = window.df.groupby('Ticker')['Cena'].pct_change() * 100
+        #Wywołania metod
+        self.load_data(data_path)        
+        self.create_controls()        
+        self.create_plots()
+        self.update_plots()
 
-        window.tickers = sorted(window.df['Ticker'].unique())
-        window.dates = sorted(window.df['Data'].unique())
+    def on_closing(self):
+        plt.close('all') # Zamknięcie wykresów
+        self.destroy() # Zamknięcie okna
+        self.quit() # Zamknięcie aplikacji
 
-        panel_ctrl = ttk.Frame(window)
-        panel_ctrl.pack(side=tk.TOP, fill=tk.X, pady=5)
+    def load_data(self, data_path):
+        self.df = pd.read_csv(data_path)
+        
+        # Przygotowanie danych
+        self.df['Datetime'] = pd.to_datetime(self.df['Data'] + ' ' + self.df['Godzina'])
+        self.df.sort_values(['Ticker', 'Datetime'], inplace=True)
+        self.df['Return'] = self.df.groupby('Ticker')['Cena'].pct_change() * 100
+        self.df['Hour'] = self.df['Datetime'].dt.hour
+        self.df['Spread'] = self.df['Max 1D'] - self.df['Min 1D']
+        self.df['VolumeDelta'] = self.df.groupby('Ticker')['Wolumen obrotu'].diff()
+        self.df['Datetime_5min'] = self.df['Datetime'].dt.floor("5min")
+        self.df['Return_5min'] = self.df.groupby('Ticker')['Cena'].pct_change() * 100
+        self.tickers = sorted(self.df['Ticker'].unique()) 
+        self.dates = sorted(self.df['Data'].unique())   
 
-        ttk.Label(panel_ctrl, text="Spółka:").pack(side=tk.LEFT, padx=5)
-        window.ticker_cb = ttk.Combobox(panel_ctrl, values=window.tickers, state="readonly")
-        window.ticker_cb.current(0)
-        window.ticker_cb.pack(side=tk.LEFT)
+    def create_controls(self):
+        # Ramka na przyciski
+        control_panel = ttk.Frame(self)
+        control_panel.pack(side=tk.TOP, fill=tk.X, pady=5) 
 
-        ttk.Label(panel_ctrl, text="Dzień:").pack(side=tk.LEFT, padx=5)
-        window.date_cb = ttk.Combobox(panel_ctrl, values=window.dates, state="readonly")
-        window.date_cb.current(0)
-        window.date_cb.pack(side=tk.LEFT)
+        # Etykieta wyboru spółki (dropdown)
+        ttk.Label(control_panel, text="Spółka:").pack(side=tk.LEFT, padx=5) 
+        self.ticker_combo = ttk.Combobox(control_panel, values=self.tickers, state="readonly")
+        self.ticker_combo.current(0)  
+        self.ticker_combo.pack(side=tk.LEFT)
 
-        window.ticker_cb.bind("<<ComboboxSelected>>", lambda e: window.update_plots())
-        window.date_cb.bind("<<ComboboxSelected>>", lambda e: window.update_plots())
+        # Etykieta wyboru daty (dropdown)
+        ttk.Label(control_panel, text="Dzień:").pack(side=tk.LEFT, padx=5) 
+        self.date_combo = ttk.Combobox(control_panel, values=self.dates, state="readonly")
+        self.date_combo.current(0)  
+        self.date_combo.pack(side=tk.LEFT)
 
-        window.fig, window.axes = plt.subplots(2, 3, figsize=(12, 8), constrained_layout=True)
-        window.canvas = FigureCanvasTkAgg(window.fig, master=window)
-        window.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        # Powiązanie zmiany wyboru w dropdownie z aktualizacją wykresów
+        self.ticker_combo.bind("<<ComboboxSelected>>", lambda e: self.update_plots())
+        self.date_combo.bind("<<ComboboxSelected>>", lambda e: self.update_plots())
 
-        window.update_plots()
+    def create_plots(self):
+        # Utworzenie figury matplotlib 
+        self.fig, self.axes = plt.subplots(2, 3, figsize=(12, 8))
+        self.fig.tight_layout(pad=3.0) 
+        
+        # Utworzenie tła tkinter do wyświetlenia figury matplotlib
+        self.canvas = FigureCanvasTkAgg(self.fig, master=self)
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-    def update_plots(window):
-        ticker = window.ticker_cb.get()
-        day = window.date_cb.get()
+    def update_plots(self): # Główna funkcja aktualizująca 
+        # Pobranie wybranej spółki i dnia z list rozwijanych
+        ticker = self.ticker_combo.get()
+        day = self.date_combo.get()
 
-        sub = window.df[(window.df['Ticker'] == ticker) & (window.df['Data'] == day)]
-        sub_all = window.df[window.df['Data'] == day]
+        # Filtrowanie danych
+        stock_data = self.df[(self.df['Ticker'] == ticker) & (self.df['Data'] == day)]      
+        all_stocks_day = self.df[self.df['Data'] == day]
 
-        #2for i, ax in enumerate(window.axes.flatten()):
-        #2    if i != 3:  
-        #2     ax.clear()
-    
-        window.axes[0, 0].clear()
-        window.axes[0, 0].plot(sub['Datetime'], sub['Cena'], marker='o')
-        window.axes[0, 0].set_title('Cena akcji')
+        # Wyczyszczenie istniejących wykresów
+        self.fig.clear()
+        self.axes = self.fig.subplots(2, 3) # Ponowne utworzenie siatki 
+        
+        # Generowanie wykresów
+        self.plot_stock_price(stock_data)         
+        self.plot_return_vs_volume(stock_data)      
+        self.plot_hourly_returns(stock_data)       
+        self.plot_correlation_heatmap(all_stocks_day)  
+        self.plot_spread(stock_data)              
+        self.plot_volume_change(stock_data)        
 
-        window.axes[0, 1].clear()
-        window.axes[0, 1].scatter(sub['Return'], sub['Wolumen obrotu'])
-        window.axes[0, 1].set_title('Zwrot vs wolumen')
+        # Główny tytuł
+        self.fig.suptitle(f"{ticker} - {day}", fontsize=14, y=0.98)
+        self.fig.tight_layout(rect=[0, 0.03, 1, 0.95]) # Dostosowanie układu, by pomieścić tytuł
+        self.canvas.draw()  # Odświeżenie wyświetlanych wykresów
 
-        window.axes[0, 2].clear()
-        sub_box = sub.copy()
-        sub_box['Hour'] = sub_box['Datetime'].dt.hour
-        sub_box.boxplot(column='Return', by='Hour', ax=window.axes[0, 2])
-        window.axes[0, 2].set_title('Boxplot zwrot w ujęciu godzinowym')
-        window.axes[0, 2].figure.suptitle('')
+    def plot_stock_price(self, data): # Wykres ceny akcji 
+        ax = self.axes[0, 0]
+        
+        if not data.empty:
+            ax.plot(data['Datetime'], data['Cena'], marker='o', markersize=4, linewidth=1.5)
+            if len(data) > 3: # Linia trendu jeśli jest więcej danych niż 3 odczyty
+                x_numeric = np.arange(len(data))
+                trend = np.polyfit(x_numeric, data['Cena'], 1)
+                trend_line = np.poly1d(trend)
+                ax.plot(data['Datetime'], trend_line(x_numeric), 
+                       color='red', linestyle='--', alpha=0.7, label='Trend')
+                ax.legend(fontsize=8)  #Legenda z linia trendu
+                
 
-        window.axes[1, 0].clear()
-        #2window.fig.delaxes(window.axes[1, 0])  
-        #2window.axes[1, 0] = window.fig.add_subplot(2, 3, 4)  
-        pivot = sub_all.pivot_table(index='Datetime_5min', columns='Ticker', values='Return_5min')
-        corr = pivot.corr()
-        mask = np.triu(np.ones_like(corr, dtype=bool))
-        #1if hasattr(window, 'heatmap_colorbar') and window.heatmap_colorbar:   
-        #1    window.heatmap_colorbar.remove()                                   
-        #1    window.heatmap_colorbar = None
-        #1window.axes[1, 0].clear()
-        sns.heatmap(corr, mask=mask, cmap="coolwarm", annot=True, fmt=".2f", ax=window.axes[1, 0])
-        #1window.heatmap_colorbar = sns_plot.collections[0].colorbar
-        window.axes[1, 0].set_title('Heatmap korelacji (5 min)')
+        ax.set_title('Cena akcji')
+        ax.set_ylabel('Cena (PLN)')
+        ax.tick_params(axis='x', rotation=45)  # Obrócone etykiety na osi X
 
-        window.axes[1, 1].clear()
-        window.axes[1, 1].plot(sub['Datetime'], sub['Spread'], marker='o')
-        window.axes[1, 1].set_title('Rozpowszechnianie się w czasie')
+    def plot_return_vs_volume(self, data):  # Zwrot vs Wolumen
+        ax = self.axes[0, 1]
+        
+        if not data.empty and not data['Return'].isna().all():
+            clean_data = data.dropna(subset=['Return', 'Wolumen obrotu'])
+            if not clean_data.empty:
+                ax.scatter(clean_data['Return'], clean_data['Wolumen obrotu'], alpha=0.6, s=30)
+                ax.axvline(x=0, color='red', linestyle='--', alpha=0.7, label='0% zwrot')  # Punkt odniesienia 0%
+                ax.axhline(y=clean_data['Wolumen obrotu'].median(), color='orange', 
+                          linestyle='--', alpha=0.5, label='Mediana wolumenu')  # Mediana
+                ax.legend(fontsize=8)  # Legenda
+                
+        ax.set_title('Zwrot vs wolumen')
+        ax.set_xlabel('Zwrot (%)')
+        ax.set_ylabel('Wolumen')
 
-        window.axes[1, 2].clear()
-        vol_hour = sub.groupby(sub['Hour'])['VolumeDelta'].sum()
-        window.axes[1, 2].plot(vol_hour.index, vol_hour.values, marker='o')
-        window.axes[1, 2].set_title('Zmiana wolumenu według godziny')
+    def plot_hourly_returns(self, data): # Zwrot według godziny
+        ax = self.axes[0, 2]
+        
+        if not data.empty and not data['Return'].isna().all():
+            hourly_avg = data.groupby('Hour')['Return'].mean()
+            if not hourly_avg.empty:
+                ax.plot(hourly_avg.index, hourly_avg.values, marker='o', markersize=6, linewidth=2)   # Punkt odniesienia 0%
+                ax.axhline(y=0, color='red', linestyle='--', alpha=0.5)
+        
+        ax.set_title('Zwrot według godzin')
+        ax.set_xlabel('Godzina')
+        ax.set_ylabel('Zwrot (%)')
 
-        for ax in window.axes.flatten():
-            ax.tick_params(axis='x', rotation=45)
+    def plot_correlation_heatmap(self, data):   # Macierz korelacji
+        ax = self.axes[1, 0]
+        if not data.empty:
+            pivot = data.pivot_table(
+                index='Datetime_5min',  
+                columns='Ticker',       
+                values='Return_5min'    
+            )
+            
+            # Obliczenia
+            corr_matrix = pivot.corr()
+            
+            if not corr_matrix.empty and len(corr_matrix) > 1:
+                # Usuniecie zbędnych danych
+                mask = np.triu(np.ones_like(corr_matrix, dtype=bool))
 
-        window.fig.suptitle(f"Analiza: {ticker} - {day}", fontsize=14)
-        window.canvas.draw()
+                masked_corr = corr_matrix.copy()
+                masked_corr[mask] = np.nan
+                
+                # Heatmapa z paletą kolorów
+                im = ax.imshow(masked_corr, cmap='RdBu_r', aspect='auto', vmin=-1, vmax=1)
+                
+                # Osie
+                tickers = corr_matrix.columns
+                ax.set_xticks(range(len(tickers)))
+                ax.set_yticks(range(len(tickers)))
+                ax.set_xticklabels(tickers, rotation=45, ha='right')
+                ax.set_yticklabels(tickers)
+                
+                # Wpisane wartości w macierz
+                for i in range(len(tickers)):
+                    for j in range(len(tickers)):
+                        if i > j:  
+                            value = corr_matrix.iloc[i, j]
+                            if not np.isnan(value):
+                                ax.text(j, i, f'{value:.2f}', 
+                                       ha='center', va='center', 
+                                       color='black', fontweight='normal')
+                
+                # Legenda kolorów
+                cbar = plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+                cbar.set_label('Korelacja', rotation=270, labelpad=15)
+        
+        ax.set_title('Korelacja zwrotów między spółkami')
 
-    def show_error(window, message):
-        err_window = tk.Toplevel(window)
-        err_window.title("Błąd")
-        err_label = ttk.Label(err_window, text=message, foreground="red")
-        err_label.pack(padx=20, pady=20)
-        close_btn = ttk.Button(err_window, text="Zamknij", command=window.destroy)
-        close_btn.pack(pady=10)
+    def plot_spread(self, data):  # Spread w czasie
+        ax = self.axes[1, 1]  
+
+        if not data.empty and not data['Spread'].isna().all():
+            clean_data = data.dropna(subset=['Spread'])
+            if not clean_data.empty:
+                ax.plot(clean_data['Datetime'], clean_data['Spread'], 
+                       marker='o', markersize=4, linewidth=1.5)
+                avg_spread = clean_data['Spread'].mean()  # Średni spread
+                ax.axhline(y=avg_spread, color='green', linestyle='--', 
+                          alpha=0.7, label=f'Średni spread: {avg_spread:.2f}')
+                ax.legend(fontsize=8)  # Legenda
+                
+
+        ax.set_title('Spread w czasie')
+        ax.set_xlabel('Czas')
+        ax.set_ylabel('Spread (PLN)')
+        ax.tick_params(axis='x', rotation=45)
+
+    def plot_volume_change(self, data):  # Wolumen wg godziny
+        ax = self.axes[1, 2]
+        
+        if not data.empty and not data['VolumeDelta'].isna().all():
+            hourly_volume = data.groupby('Hour')['VolumeDelta'].sum()
+            if not hourly_volume.empty:
+                ax.bar(hourly_volume.index, hourly_volume.values, 
+                      color='green', alpha=0.7, width=0.6)
+                ax.axhline(y=0, color='black', linestyle='-', alpha=0.8)    # Punkt odniesienia 0
+                
+
+        ax.set_title('Wolumen według godziny')
+        ax.set_xlabel('Godzina')
+        ax.set_ylabel('Wolumen')
+        ax.grid(True, alpha=0.3)
+
+    def show_error(self, message):   # Wyświetlanie błędów
+        error_window = tk.Toplevel(self)
+        error_window.title("Błąd")
+        error_window.geometry("300x150")
+        
+        label = ttk.Label(error_window, text=message, foreground="red")
+        label.pack(padx=20, pady=20)
+        
+        button = ttk.Button(error_window, text="Zamknij", 
+                           command=error_window.destroy)
+        button.pack(pady=10)
 
 if __name__ == '__main__':
-    app = StockApp()
-    app.mainloop()
+    app = GuiApp()
+    app.mainloop() 

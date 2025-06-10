@@ -1,11 +1,11 @@
 from scraper.scraper import Scraper
 from scraper.config import create_driver
 from scraper.utils import save_to_csv
-from gui import StockApp
+from gui import GuiApp
 from datetime import datetime, time
 import time as systime
 import sys
-from gui import StockApp
+
 
 def main():
 
@@ -40,7 +40,7 @@ def main():
 
 if __name__ == "__main__":
     if "--gui" in sys.argv:
-        app = StockApp()
+        app = GuiApp()
         app.mainloop()
     else:
         main()
