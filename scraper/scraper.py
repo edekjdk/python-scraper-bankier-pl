@@ -80,9 +80,21 @@ class Scraper:
         if text is None:
             return None
         text = (
-            text.replace(" ", "").replace("zł", "").replace("%", "").replace(",", ".").replace("mln", "").replace("tys", "").replace("mld", "").replace("szt", "")
+            text.replace(" ", "")
+            .replace("zł", "")
+            .replace("%", "")
+            .replace(",", ".")
+            .replace("mln", "")
+            .replace("tys", "")
+            .replace("mld", "")
+            .replace("szt", "")
         )
         try:
             return float(text)
         except ValueError:
             return text
+
+
+class Program:
+    def __init__(self):
+        pass
