@@ -36,13 +36,14 @@ class GuiApp(tk.Tk):
     def load_data(self, data_path):
         self.df = pd.read_csv(data_path)
 
+    
         # Przygotowanie danych
         self.df["Datetime"] = pd.to_datetime(self.df["Data"] + " " + self.df["Godzina"])
         self.df.sort_values(["Ticker", "Datetime"], inplace=True)
         self.df["Return"] = self.df.groupby("Ticker")["Cena"].pct_change() * 100
         self.df["Hour"] = self.df["Datetime"].dt.hour
         self.df["Spread"] = self.df["Max 1D"] - self.df["Min 1D"]
-        self.df["VolumeDelta"] = self.df.groupby("Ticker")["Wolumen obrotu"].diff()
+        self.df["VolumeDelta"] = self.df.groupby(["Ticker", "Data"])["Wartość obrotu"].diff()
         self.df["Datetime_5min"] = self.df["Datetime"].dt.floor("5min")
         self.df["Return_5min"] = self.df.groupby("Ticker")["Cena"].pct_change() * 100
         self.tickers = sorted(self.df["Ticker"].unique())
@@ -260,7 +261,7 @@ class GuiApp(tk.Tk):
 
     def plot_volume_change(self, data):  # Wolumen wg godziny
         ax = self.axes[1, 2]
-
+        print(data[["Data", "Godzina", "Wartość obrotu", "VolumeDelta"]].head(10))
         if not data.empty and not data["VolumeDelta"].isna().all():
             hourly_volume = data.groupby("Hour")["VolumeDelta"].sum()
             if not hourly_volume.empty:
