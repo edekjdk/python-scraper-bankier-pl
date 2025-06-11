@@ -261,7 +261,7 @@ class GuiApp(tk.Tk):
 
     def plot_volume_change(self, data):  # Wolumen wg godziny
         ax = self.axes[1, 2]
-        print(data[["Data", "Godzina", "Wartość obrotu", "VolumeDelta"]].head(10))
+        
         if not data.empty and not data["VolumeDelta"].isna().all():
             hourly_volume = data.groupby("Hour")["VolumeDelta"].sum()
             if not hourly_volume.empty:
